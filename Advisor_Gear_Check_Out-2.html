@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Advisor Gear Check-Out</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root { --primary: #1F4E79; --accent: #2E75B6; --bg: #f4f6f8; --card: #ffffff; --border: #d0d7de; --success: #1e7e34; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 12px; background: var(--bg); color: #1a1a1a; font-size: 16px; }
+  .header { background: var(--primary); color: white; padding: 16px; text-align: center; border-radius: 10px 10px 0 0; margin: -12px -12px 16px -12px; }
+  .header h1 { margin: 0; font-size: 1.3rem; }
+  .card { background: var(--card); border-radius: 10px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border); }
+  h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+  h3 { margin: 16px 0 8px; font-size: 1rem; }
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 12px 0 4px; }
+  input, textarea { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--border); border-radius: 8px; }
+  textarea { min-height: 70px; }
+  .item-row { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; position: relative; }
+  .item-row .remove-btn { position: absolute; top: 6px; right: 6px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; }
+  .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .full { grid-column: 1 / -1; }
+  .btn { display: block; width: 100%; background: var(--accent); color: white; border: none; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; margin-top: 8px; }
+  .btn-success { background: var(--success); }
+  .btn-secondary { background: #6c757d; }
+  .checkbox-label { display: flex; align-items: center; gap: 12px; margin-top: 16px; font-weight: 600; }
+  .checkbox-label input { width: 24px; height: 24px; }
+  pre { white-space: pre-wrap; background: #f8f9fa; padding: 14px; border-radius: 6px; border: 1px solid var(--border); }
+  .success-msg { background: #d4edda; color: #155724; padding: 16px; border-radius: 8px; text-align: center; display: none; }
+</style>
+</head>
+<body>
+<div class="header"><h1>ADVISOR GEAR CHECK-OUT</h1><p>Equipment Issue Form</p></div>
+<form id="gearForm">
+  <div class="card">
+    <h2>01 Personnel</h2>
+    <label>Full Name</label><input type="text" name="fullName" required>
+    <label>Organization</label><input type="text" name="organization">
+    <label>In-Country Mobile Phone</label><input type="tel" name="phone">
+    <label>Blood Type</label><input type="text" name="bloodType">
+    <label>Issue Date</label><input type="date" name="issueDate">
+    <label>Expected Return</label><input type="date" name="expectedReturn">
+    <label>Next of Kin</label><input type="text" name="nextOfKin">
+    <label>Relationship</label><input type="text" name="relationship">
+    <label>Next of Kin Phone</label><input type="tel" name="nokPhone">
+    <label>Alternate Phone</label><input type="tel" name="altPhone">
+  </div>
+  <div class="card">
+    <h2>Weapons and Accessories</h2>
+    <p class="note" style="font-size:0.8rem;color:#5c6b7a;font-style:italic;">Enter serial numbers or N/A. Leave blank if not issued.</p>
+    <h3>A Weapon Lower</h3>
+    <div class="item-row"><div class="item-grid"><div class="full"><label>Weapon Lower</label><input type="text" name="weapon_lower_serial" placeholder="Serial / ID"></div><div><label>Qty</label><input type="text" name="weapon_lower_qty"></div><div><label>Notes</label><input type="text" name="weapon_lower_notes"></div></div></div>
+    <h3>B Upper Number 1 — 300 BLK</h3><div id="upper1Container"></div>
+    <h3>C Upper Number 2 — 6 ARC</h3><div id="upper2Container"></div>
+    <h3>D Pistol and Accessories</h3><div id="pistolContainer"></div>
+  </div>
+  <div class="card">
+    <h2>02 Armor and Other Supply</h2>
+    <h3>E Body Armor Plates</h3><div id="platesContainer"></div>
+    <h3>F Other Items</h3><div id="otherContainer"></div>
+    <button type="button" id="addOtherBtn" class="btn btn-secondary">+ Add Additional Item</button>
+  </div>
+  <div class="card">
+    <h2>Final Acknowledgment</h2>
+    <label>Signature (type full name)</label><input type="text" name="finalSignature" required>
+    <label>Date</label><input type="date" name="finalDate" required>
+    <label class="checkbox-label"><input type="checkbox" name="signed" required> I confirm this is my signature and I acknowledge receipt of the items listed.</label>
+  </div>
+  <div class="card">
+    <button type="submit" class="btn btn-success">Submit to Signal + PDF</button>
+    <button type="button" id="resetBtn" class="btn btn-secondary">Reset / Clear</button>
+  </div>
+</form>
+<div id="success" class="success-msg"><strong>Check-out ready.</strong> Share text via Signal and download the PDF.</div>
+<div id="output" class="card" style="display:none;">
+  <h2>Summary</h2><pre id="summary"></pre>
+  <button type="button" id="shareBtn" class="btn btn-success">Share Text via Signal</button>
+  <button type="button" id="pdfBtn" class="btn">Download PDF</button>
+  <button type="button" id="copyBtn" class="btn">Copy Summary</button>
+  <button type="button" id="newBtn" class="btn btn-secondary">Start New</button>
+</div>
+<script>
+let otherItemCount = 0;
+const { jsPDF } = window.jspdf;
+
+function addItemRow(containerId, itemName) {
+  const container = document.getElementById(containerId);
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  const key = itemName.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+  div.innerHTML = `<div class="item-grid"><div class="full"><label>${itemName}</label><input type="text" name="${key}_serial" placeholder="Serial / ID"></div><div><label>Qty</label><input type="text" name="${key}_qty"></div><div><label>Notes</label><input type="text" name="${key}_notes"></div></div>`;
+  container.appendChild(div);
+}
+function addOtherItem() {
+  otherItemCount++;
+  const container = document.getElementById('otherContainer');
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.innerHTML = `<button type="button" class="remove-btn">×</button><div class="item-grid"><div class="full"><label>Item Name</label><input type="text" name="other_item_${otherItemCount}_name"></div><div><label>Qty</label><input type="text" name="other_item_${otherItemCount}_qty"></div><div><label>Notes</label><input type="text" name="other_item_${otherItemCount}_notes"></div></div>`;
+  div.querySelector('.remove-btn').onclick = () => div.remove();
+  container.appendChild(div);
+}
+function initSections() {
+  ['Upper number 1 — 300 BLK','Optic','Laser','Flashlight','Magazines','Sling with swivels'].forEach(i => addItemRow('upper1Container', i));
+  ['Upper number 2 — 6 ARC','Optic','Laser','Flashlight','Magazines','Sling with swivels'].forEach(i => addItemRow('upper2Container', i));
+  ['Pistol','Pistol optic','Pistol light/laser'].forEach(i => addItemRow('pistolContainer', i));
+  ['Plate 1 — Front','Plate 2 — Back','Plate 3 — Left side','Plate 4 — Right side'].forEach(i => addItemRow('platesContainer', i));
+  addItemRow('otherContainer', 'BNVD');
+  addItemRow('otherContainer', 'Quad Tubes');
+}
+function resetForm() {
+  document.getElementById('gearForm').reset();
+  ['upper1Container','upper2Container','pistolContainer','platesContainer','otherContainer'].forEach(id => document.getElementById(id).innerHTML = '');
+  otherItemCount = 0;
+  initSections();
+  document.getElementById('success').style.display = 'none';
+  document.getElementById('output').style.display = 'none';
+  document.getElementById('gearForm').style.display = 'block';
+}
+function copySummary() {
+  navigator.clipboard?.writeText(document.getElementById('summary').textContent).then(() => alert('Copied')).catch(() => alert('Copy manually'));
+}
+function shareToSignal() {
+  const text = document.getElementById('summary').textContent;
+  if (navigator.share) navigator.share({title: 'Advisor Gear Check-Out', text}).catch(() => copySummary());
+  else { copySummary(); alert('Copied — paste into Signal'); }
+}
+function generatePDF() {
+  const doc = new jsPDF();
+  const text = document.getElementById('summary').textContent;
+  const lines = doc.splitTextToSize(text, 180);
+  doc.setFontSize(11);
+  doc.text(lines, 15, 20);
+  const name = (document.querySelector('[name="fullName"]').value || 'Unknown').replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save(`Advisor_Gear_Check-Out_${name}.pdf`);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  initSections();
+  document.getElementById('addOtherBtn').onclick = addOtherItem;
+  document.getElementById('resetBtn').onclick = resetForm;
+  document.getElementById('shareBtn').onclick = shareToSignal;
+  document.getElementById('pdfBtn').onclick = generatePDF;
+  document.getElementById('copyBtn').onclick = copySummary;
+  document.getElementById('newBtn').onclick = resetForm;
+  document.getElementById('gearForm').onsubmit = function(e) {
+    e.preventDefault();
+    const data = new FormData(this);
+    let s = "ADVISOR GEAR CHECK-OUT\n======================\n\n";
+    s += `Name: ${data.get('fullName')||''}\nOrganization: ${data.get('organization')||''}\nIn-Country Mobile: ${data.get('phone')||''}\nBlood Type: ${data.get('bloodType')||''}\nIssue Date: ${data.get('issueDate')||''}\nExpected Return: ${data.get('expectedReturn')||''}\nNext of Kin: ${data.get('nextOfKin')||''} (${data.get('relationship')||''})\nNOK Phone: ${data.get('nokPhone')||''} Alt: ${data.get('altPhone')||''}\n\n`;
+    function sec(title, items) {
+      s += title + "\n-----------------------------\n";
+      let has = false;
+      items.forEach(item => {
+        const k = item.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();
+        const serial = data.get(k+'_serial')||''; const qty = data.get(k+'_qty')||''; const notes = data.get(k+'_notes')||'';
+        if (serial || qty || notes) { s += `${item}: ${serial||'N/A'} | Qty: ${qty||'-'} | Notes: ${notes||'-'}\n`; has = true; }
+      });
+      if (!has) s += "None recorded.\n";
+      s += "\n";
+    }
+    sec("A WEAPON LOWER", ['Weapon Lower']);
+    sec("B UPPER 1 — 300 BLK", ['Upper number 1 — 300 BLK','Optic','Laser','Flashlight','Magazines','Sling with swivels']);
+    sec("C UPPER 2 — 6 ARC", ['Upper number 2 — 6 ARC','Optic','Laser','Flashlight','Magazines','Sling with swivels']);
+    sec("D PISTOL", ['Pistol','Pistol optic','Pistol light/laser']);
+    sec("E BODY ARMOR PLATES", ['Plate 1 — Front','Plate 2 — Back','Plate 3 — Left side','Plate 4 — Right side']);
+    s += "F OTHER ITEMS\n-----------------------------\n";
+    let otherHas = false;
+    ['BNVD','Quad Tubes'].forEach(item => {
+      const k = item.toLowerCase();
+      const serial = data.get(k+'_serial')||''; const qty = data.get(k+'_qty')||''; const notes = data.get(k+'_notes')||'';
+      if (serial || qty || notes) { s += `${item}: ${serial||'N/A'} | Qty: ${qty||'-'} | Notes: ${notes||'-'}\n`; otherHas = true; }
+    });
+    for (let i = 1; i <= otherItemCount; i++) {
+      const name = data.get(`other_item_${i}_name`)||''; const qty = data.get(`other_item_${i}_qty`)||''; const notes = data.get(`other_item_${i}_notes`)||'';
+      if (name || qty || notes) { s += `${name||'Item'}: Qty: ${qty||'-'} | Notes: ${notes||'-'}\n`; otherHas = true; }
+    }
+    if (!otherHas) s += "None recorded.\n";
+    s += "\nFINAL ACKNOWLEDGMENT\n-----------------------------\n";
+    s += `Signature: ${data.get('finalSignature')||''}\nDate: ${data.get('finalDate')||''}\nConfirmed by checkbox: Yes\n\nGenerated: ${new Date().toLocaleString()}`;
+    document.getElementById('summary').textContent = s;
+    document.getElementById('output').style.display = 'block';
+    document.getElementById('success').style.display = 'block';
+    document.getElementById('gearForm').style.display = 'none';
+    setTimeout(() => { shareToSignal(); }, 300);
+  };
+});
+</script>
+</body>
+</html>
